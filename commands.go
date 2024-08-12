@@ -27,14 +27,20 @@ func (app *App) registerCommandHandlers() {
 		"print":       NewCommand(printCommand, `Prints the current conversation context.`, [][]string{}),
 		"append":      NewCommand(appendCommand, `Appends a message to the current conversation context.`, [][]string{{"user", "assistant", "system"}, {"message"}}),
 		"prepend":     NewCommand(prependCommand, `Adds a message to the beggining of the current conversation context.`, [][]string{{"user", "assistant", "system"}, {"message"}}),
-		"model":       NewCommand(modelCommand, `Switches the current model, keeping the conversation context.`, [][]string{{"model-name"}}),
-		"pop":         NewCommand(popCommand, `Removes the last N messages from the context. N defaults to 2, as to pop the last answer given by the model and the question that led to it.`, [][]string{{"N?"}}),
-		"escape":      NewCommand(escapeCommand, `Appends the following text and sends the context to the model, storing its response in the context. Useful for sending empty strings or messages beggining with the slash "/" character.`, [][]string{{"text"}}),
-		"nano":        NewCommand(nanoCommand, `Opens a nano (by default) text editor instance. You can write a multi-line prompt in it, which will be appended to the context (without sending it) once saved and closed. To use a different text editor, specify its path in the TEXT_EDITOR environment variable.`, [][]string{{"user", "assistant", "system"}}),
-		"ns":          NewCommand(nanoSendCommand, `The same as running /nano and then /send. Role is set to "user" by default. Also prints the message when in non-quiet mode.`, [][]string{{"user", "assistant", "system?"}}),
-		"send":        NewCommand(sendCommand, `Sends the current context as-is to the model and stores its response in the context.`, [][]string{}),
-		"autosave":    NewCommand(autosaveCommand, `Changes the autosave file path. The context is automatically saved to this file after every update. Run with no arguments to disable this feature. WARNING: The file is not loaded and its contents may be overwritten.`, [][]string{{"path?"}}),
-		"exit":        NewCommand(exitCommand, `Exits the program.`, [][]string{{"status-code?"}}),
+		"model":       NewCommand(modelCommand, `Switches the current model (e.g. gpt-3.5-turbo), keeping the conversation context.`, [][]string{{"model-name"}}),
+		"pop": NewCommand(popCommand, `Removes the last N messages from the context. N defaults to 2, as to pop the last answer given by the model and
+		the question that led to it.`, [][]string{{"N?"}}),
+		"escape": NewCommand(escapeCommand, `Appends the following text and sends the context to the model, storing its response in the context. Useful for
+		sending empty strings or messages beggining with the slash "/" character.`, [][]string{{"text"}}),
+		"nano": NewCommand(nanoCommand, `Opens a nano (by default) text editor instance. You can write a multi-line prompt in it, which will be appended
+		to the context (without sending it) once saved and closed. To use a different text editor, specify its path in the TEXT_EDITOR environment variable.
+		See also /ns, which may be more useful for interactive sessions in most cases.`, [][]string{{"user", "assistant", "system"}}),
+		"ns":   NewCommand(nanoSendCommand, `The same as running /nano and then /send. Role is set to "user" by default. Also prints the message when not in quiet mode.`, [][]string{{"user?", "assistant?", "system?"}}),
+		"send": NewCommand(sendCommand, `Sends the current context as-is to the model and stores its response in the context.`, [][]string{}),
+		"autosave": NewCommand(autosaveCommand, `Changes the autosave file path. Every time the context changes, it is automatically saved to this file. Run
+		with no arguments to disable this feature. WARNING: The file will be overwritten. You may want to load it first with
+		/replacefrom, /appendfrom or /prependfrom.`, [][]string{{"path?"}}),
+		"exit": NewCommand(exitCommand, `Exits the program.`, [][]string{{"status-code?"}}),
 	}
 }
 
