@@ -42,6 +42,8 @@ func (app *App) registerCommandHandlers() {
 		"autosave": NewCommand(autosaveCommand, `Changes the autosave file path. Every time the context changes, it is automatically saved to this file. Run
 		with no arguments to disable this feature. WARNING: The file will be overwritten. You may want to load it first with
 		/replacefrom, /appendfrom or /prependfrom.`, [][]string{{"path?"}}),
+		"edit": NewCommand(editCommand, `Opens a nano (by default) text editor instance showing the current conversation context and allowing it to be edited.
+		The context is updated once the editor is closed and the file has been saved. To use a different text editor, specify its path in the GPTREPL_TEXT_EDITOR environment variable.`, [][]string{}),
 		"exit": NewCommand(exitCommand, `Exits the program.`, [][]string{{"status-code?"}}),
 	}
 }
@@ -119,11 +121,7 @@ func printCommand(app *App, args string) error {
 	if args != "" {
 		app.printer.PrintWarning("this command takes no arguments. Printing context anyways\n")
 	}
-	c := color.Set(color.Bold, color.FgWhite)
-	for _, msg := range app.context {
-		app.printer.Print("%v%v%v\n", color.CyanString("["), c.Sprintf("%v", msg.Role), color.CyanString("]"))
-		app.printer.Print("%v\n\n", msg.Content)
-	}
+	app.printer.Print(plainTextRepresentation(app.context, true))
 	return nil
 }
 
@@ -188,7 +186,7 @@ func nanoCommand(app *App, role string) error {
 		return fmt.Errorf("invalid role: \"%v\"", role)
 	}
 
-	content, err := presentTextEditor()
+	content, err := presentTextEditor("")
 	if err != nil {
 		return err
 	}
@@ -222,7 +220,7 @@ func nanoSendCommand(app *App, role string) error {
 		return fmt.Errorf("invalid role: \"%v\"", role)
 	}
 
-	content, err := presentTextEditor()
+	content, err := presentTextEditor("")
 	if err != nil {
 		return err
 	}
@@ -247,6 +245,23 @@ func nanoSendCommand(app *App, role string) error {
 func autosaveCommand(app *App, path string) error {
 	app.autosaveFilePath = path
 	app.tryUpdateAutosaveFile()
+	return nil
+}
+
+func editCommand(app *App, args string) error {
+	if args != "" {
+		return ErrExpectNoArguments
+	}
+	repr := plainTextRepresentation(app.context, false)
+	newData, err := presentTextEditor(repr)
+	if err != nil {
+		return err
+	}
+	newContext, err := parseUncoloredPlainTextRepresentation(newData)
+	if err != nil {
+		return err
+	}
+	app.context = newContext
 	return nil
 }
 
@@ -295,10 +310,14 @@ func readContextFileFromArguments(args string) ([]Message, error) {
 	return ctx, nil
 }
 
-func presentTextEditor() (string, error) {
+func presentTextEditor(initialContent string) (string, error) {
 	temp, err := os.CreateTemp("", "gptrepl")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary file: %v", err)
+	}
+	_, err = temp.WriteString(initialContent)
+	if err != nil {
+		return "", fmt.Errorf("failed to write initial content to the temporary file: %v", err)
 	}
 	temp.Close()
 	defer os.Remove(temp.Name())

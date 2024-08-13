@@ -845,3 +845,68 @@ func TestAskQuestion(t *testing.T) {
 		p.err.Reset()
 	}
 }
+
+func TestParsePlainTextEmptyString(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("")
+	if err != nil {
+		t.Fatalf("expected no errors, got %v", err)
+	}
+	if len(ctx) != 0 {
+		t.Fatalf("expected empty array as result, got %v", ctx)
+	}
+}
+
+func TestParsePlainTextOnlyNewlines(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("\n\n\n")
+	if err != nil {
+		t.Fatalf("expected no errors, got %v", err)
+	}
+	if len(ctx) != 0 {
+		t.Fatalf("expected empty array as result, got %v", ctx)
+	}
+}
+
+func TestParsePlainTextContentWithoutRoles(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("abcdef")
+	if err == nil {
+		t.Fatalf("expected an error, got %v", ctx)
+	}
+}
+
+func TestParsePlainTextContentBeforeRole(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("abcdef\n[user]\n")
+	if err == nil {
+		t.Fatalf("expected an error, got %v", ctx)
+	}
+}
+
+func TestParsePlainTextContentInvalidRole(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("[xyzxyz]\nabcdef\n")
+	if err == nil {
+		t.Fatalf("expected an error, got %v", ctx)
+	}
+}
+
+func TestParsePlainTextContentIgnoresExtraNewline(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("[user]\n\n\n\n\nabcdef\n\n\n[system]\n\n\n\ntest\n\n\n\n\n")
+	if err != nil {
+		t.Fatalf("expected no errors, got %v", err)
+	}
+	assertContextEquals(t, ctx, []Message{{Role: "user", Content: "abcdef"}, {Role: "system", Content: "test"}})
+}
+
+func TestParsePlainTextContentSingleMessage(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("[user]\nabcdef")
+	if err != nil {
+		t.Fatalf("expected no errors, got %v", err)
+	}
+	assertContextEquals(t, ctx, []Message{{Role: "user", Content: "abcdef"}})
+}
+
+func TestParsePlainTextContentMultipleMessages(t *testing.T) {
+	ctx, err := parseUncoloredPlainTextRepresentation("[user]\nabcdef\n[assistant]\ntest")
+	if err != nil {
+		t.Fatalf("expected no errors, got %v", err)
+	}
+	assertContextEquals(t, ctx, []Message{{Role: "user", Content: "abcdef"}, {Role: "assistant", Content: "test"}})
+}
