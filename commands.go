@@ -33,7 +33,7 @@ func (app *App) registerCommandHandlers() {
 		"escape": NewCommand(escapeCommand, `Appends the following text and sends the context to the model, storing its response in the context. Useful for
 		sending empty strings or messages beggining with the slash "/" character.`, [][]string{{"text"}}),
 		"nano": NewCommand(nanoCommand, `Opens a nano (by default) text editor instance. You can write a multi-line prompt in it, which will be appended
-		to the context (without sending it) once saved and closed. To use a different text editor, specify its path in the TEXT_EDITOR environment variable.
+		to the context (without sending it) once saved and closed. To use a different text editor, specify its path in the GPTREPL_TEXT_EDITOR environment variable.
 		See also /ns, which may be more useful for interactive sessions in most cases.`, [][]string{{"user", "assistant", "system"}}),
 		"ns":   NewCommand(nanoSendCommand, `The same as running /nano and then /send. Role is set to "user" by default. Also prints the message when not in quiet mode.`, [][]string{{"user?", "assistant?", "system?"}}),
 		"send": NewCommand(sendCommand, `Sends the current context as-is to the model and stores its response in the context.`, [][]string{}),
@@ -301,7 +301,7 @@ func presentTextEditor() (string, error) {
 	temp.Close()
 	defer os.Remove(temp.Name())
 	os.Chmod(temp.Name(), 0777)
-	editorPath := os.Getenv("TEXT_EDITOR")
+	editorPath := os.Getenv("GPTREPL_TEXT_EDITOR")
 	if editorPath == "" {
 		editorPath = "nano"
 	}
