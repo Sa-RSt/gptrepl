@@ -16,6 +16,8 @@ type Command struct {
 	args        [][]string
 }
 
+var ErrExpectNoArguments = fmt.Errorf("expected no arguments")
+
 func (app *App) registerCommandHandlers() {
 	app.commandHandlers = map[string]Command{
 		"help":        NewCommand(helpCommand, `Shows this help page.`, [][]string{}),
@@ -106,7 +108,7 @@ func prependFromCommand(app *App, path string) error {
 
 func clearCommand(app *App, args string) error {
 	if args != "" {
-		return fmt.Errorf("no arguments expected")
+		return ErrExpectNoArguments
 	}
 	app.context = make([]Message, 0)
 	app.tryUpdateAutosaveFile()
@@ -202,7 +204,7 @@ func nanoCommand(app *App, role string) error {
 
 func sendCommand(app *App, args string) error {
 	if args != "" {
-		return fmt.Errorf("expected no arguments")
+		return ErrExpectNoArguments
 	}
 	responseContent, err := app.sendContextAndProcessResponse()
 	if err != nil {
