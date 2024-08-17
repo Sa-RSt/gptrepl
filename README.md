@@ -1,10 +1,7 @@
 # gptrepl
-Simple command-line REPL client for manually interacting with the OpenAI API. This repository and this tool are not affiliated with OpenAI.
+Simple Go-based command-line Read Eval Print Loop (REPL) client for manually interacting with the OpenAI Chat Completions API, allowing for a more flexible and low-level experience. This repository and this tool are not affiliated with OpenAI.
 
-## Introduction
-Command-line REPL client is a Go-based command line frontend for the OpenAI Chat Completions API (also known as ChatGPT). The main purpose of this command line interface is to allow for a more flexible user experience.
-
-## Getting Started
+## Getting started
 
 ### Standalone executable
 
@@ -20,15 +17,17 @@ gptrepl -help
 ```bash
 go version
 ```
-2. Clone the repository.
+This project was tested in Go 1.23.0.
+
+2. Clone the repository:
 ```bash
 git clone https://github.com/Sa-RSt/gptrepl.git
 ```
-3. Navigate into the repository.
+3. Navigate into the repository:
 ```bash
 cd gptrepl
 ```
-4. Run the main package.
+4. Run the main package:
 ```bash
 go run .
 ```
@@ -37,7 +36,7 @@ go run .
 An API key is necessary in order for this program to communicate with OpenAI's chat models. Follow these steps to obtain one if you haven't already:
 
 1. Access https://platform.openai.com/settings/profile?tab=api-keys
-1. Create / log into your account.
+1. Create or log into your account.
 1. Click on "Create new secret key".
 1. Store the key somewhere safe.
 
@@ -47,7 +46,7 @@ Set the OPENAI_API_KEY environment variable before running gptrepl:
 ```bash
 OPENAI_API_KEY=your-key-here gptrepl
 ```
-You may also set this variable globally, at a greater risk of exposing your key.
+You may also set this variable globally, at a greater risk of exposing your key to other programs.
 
 ### Option 2: Command line argument
 Set the API key as an argument:
@@ -102,72 +101,70 @@ Brazil
 ```
 Use `/help` to check out other commands.
 
-### For batch processing: an example usage
+### For automated processing: an example usage
 ```bash
 $ cat fact_verifier.json
 [
-        {
-                "role": "system",
-                "content": "You are a fact verifier"
-        },
-        {
-                "role": "system",
-                "content": "You can only answer \"Yes\" if you know a statement is true, \"No\" if you know it's untrue or \"Undecidable\" if there is not enough information."
-        },
-        {
-                "role": "user",
-                "content": "Is Paris the capital of France?"
-        },
-        {
-                "role": "assistant",
-                "content": "Yes"
-        }
+    {
+        "role": "system",
+        "content": "You are a fact verifier"
+    },
+    {
+        "role": "system",
+        "content": "You can only answer \"Yes\" if you know a statement is true, \"No\" if you know it's untrue or \"Undecidable\" if there is not enough information."
+    },
+    {
+        "role": "user",
+        "content": "Is Paris the capital of France?"
+    },
+    {
+        "role": "assistant",
+        "content": "Yes"
+    }
 ]
 
-$ echo "Generate 15 true/false questions to test a person's general knowledge of the world, separated only by one newline. Do no
-t include the answers in any form." | gptrepl -quiet -nocommands | tee questions.txt | gptrepl -quiet -nocommands -ctx fact_verifier.json > answers.txt
+$ echo "Generate 15 true/false questions to test a person's general knowledge of the world, separated only by one newline. Do not include the answers in any form."| gptrepl -quiet -nocommands -model gpt-4o | tee questions.txt | gptrepl -quiet -nocommands -ctx fact_verifier.json -model gpt-4o -forgetful > answers.txt
 
 $ cat questions.txt
 1. The Great Wall of China is visible from space.
-2. The capital of Australia is Sydney.
-3. The largest planet in our solar system is Jupiter.
-4. Dolphins are a type of fish.
-5. Mount Everest is located in Switzerland.
-6. The Nile river is the longest river in the world.
-7. Picasso was a famous American painter.
-8. World War I ended in 1918.
-9. The Amazon Rainforest is primarily in Africa.
-10. There are 50 states in the United States of America.
-11. Albert Einstein was awarded the Nobel Prize in Physics.
-12. The human body has 206 bones.
-13. Python is a programming language.
-14. Coffee originated in South America.
-15. Tokyo is the capital of China.
+2. Australia is both a country and a continent.
+3. Mount Everest is located in India.
+4. The Amazon River is the longest river in the world.
+5. The capital of Canada is Ottawa.
+6. The Sahara Desert is the largest desert in the world.
+7. Tokyo is the most populous city in the world.
+8. The Nile River flows through South America.
+9. The currency of Japan is the Yen.
+10. Russia is the largest country in the world by land area.
+11. The United Nations headquarters is located in Paris.
+12. The official language of Brazil is Spanish.
+13. Antarctica is inhabited by humans all year round.
+14. The Eiffel Tower is located in Berlin.
+15. Mount Kilimanjaro is in Tanzania.
 
 $ cat answers.txt
 No
-No
 Yes
 No
 No
 Yes
-No
+Undecidable
 Yes
 No
 Yes
 Yes
-Yes
-Yes
 No
 No
+No
+No
+Yes
 ```
 **Explanation:** The large command above can be divided into two parts. Let's explore the first one:
 ```bash
-echo "Generate 15 true/false questions to test a person's general knowledge of the world, separated only by one newline. Do no
-t include the answers in any form." | gptrepl -quiet -nocommands | tee questions.txt
+echo "Generate 15 true/false questions to test a person's general knowledge of the world, separated only by one newline. Do not include the answers in any form." | gptrepl -quiet -nocommands -model gpt-4o | tee questions.txt
 ```
-The above makes gptrepl answer only one question, write the model's output to `questions.txt` and also pipe the output to the second part of the large command, which is be explained below. The `-quiet` flag prevents any output other than commands such as `/print` and the model itself, while the `-nocommands` flag disables interactive commands entirely.
+The above makes gptrepl answer only one question, write the model's output to `questions.txt` and also pipe the output to the second part of the large command, which is be explained below. The `-quiet` flag prevents any output other than commands such as `/print` and the model itself, while the `-nocommands` flag disables interactive commands entirely. Use the `-model` flag to specify a model other than the default (gpt-4).
 ```bash
-| gptrepl -quiet -nocommands -ctx fact_verifier.json > answers.txt
+| gptrepl -quiet -nocommands -ctx fact_verifier.json -model gpt-4o -forgetful > answers.txt
 ```
-The second part takes the piped output (one question per line) and answers each question using the context given by the `-ctx` flag and writes the answers to `answers.txt`.
+The second part takes the piped output (one question per line) and answers each question using the context given by the `-ctx` flag and writes the answers to `answers.txt`. The `-forgetful` flag prevents each question and answer from being added to the conversation context, which saves tokens by avoiding excess information exchange.
