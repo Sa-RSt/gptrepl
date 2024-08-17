@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 type MockPrinter struct {
@@ -862,6 +863,46 @@ func TestAskQuestion(t *testing.T) {
 		p.warn.Reset()
 		p.err.Reset()
 	}
+}
+
+func TestNoRetriesIfMaxRetriesIsZero(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"abc"}}
+	a, p, c := makeTestApp()
+	a.maxRetries = 0
+	c.err = fmt.Errorf("test error")
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	p.expectNoOutput(t)
+	p.expectNoWarnings(t)
+	if !strings.Contains(p.err.String(), "test error") {
+		t.Fatalf("expected errors to contain 'test error', but got %v", p.err.String())
+	}
+	c.expectNoSentContent(t)
+}
+
+func TestRetries(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"abc"}}
+	a, p, c := makeTestApp()
+	a.maxRetries = 2
+	c.err = fmt.Errorf("test error")
+	start := time.Now()
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	elapsed := time.Since(start)
+	if elapsed <= 2*time.Second {
+		t.Fatalf("expected a wait greater than two seconds, but elapsed time is %v seconds", float64(elapsed/time.Second))
+	}
+	if c.sendCallsCount != 3 {
+		t.Fatalf("expected SendContext to be called three times, but it got called %v times", c.sendCallsCount)
+	}
+	p.expectNoOutput(t)
+	p.expectNoWarnings(t)
+	if !strings.Contains(p.err.String(), "test error") {
+		t.Fatalf("expected errors to contain 'test error', but got %v", p.err.String())
+	}
+	c.expectNoSentContent(t)
 }
 
 func TestParsePlainTextEmptyString(t *testing.T) {

@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
@@ -24,6 +26,7 @@ type App struct {
 	model                 string
 	slashCommandsDisabled bool
 	quiet                 bool
+	maxRetries            uint
 	apiKey                string
 	commandHandlers       map[string]Command
 	autosaveFilePath      string
@@ -108,7 +111,22 @@ func (app *App) appMain(reader Readliner) bool {
 }
 
 func (app *App) sendContextAndProcessResponse() (string, error) {
-	stream, err := app.capi.SendContext(app.context)
+	retries := int64(app.maxRetries)
+	var stream <-chan CompletionDelta
+	var err error
+	const waitTimeMultiplier = 2.0
+	waitTime := 1.0
+	for retries >= 0 {
+		stream, err = app.capi.SendContext(app.context)
+		if err != nil {
+			retries--
+			time.Sleep(time.Duration(waitTime) * time.Second)
+			waitTime *= waitTimeMultiplier
+			waitTime += rand.Float64() / 3
+		} else {
+			break
+		}
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to send context: %v", err)
 	}
@@ -190,6 +208,7 @@ func (app *App) parseFlags() {
 	flag.StringVar(&apiKey, "apikey", "", "The OpenAI API key to use. Overrides $OPENAI_API_KEY and ~/.gptrepl-key.")
 	flag.BoolVar(&app.slashCommandsDisabled, "nocommands", false, "Disable slash (\"/\") commands.")
 	flag.BoolVar(&app.quiet, "quiet", false, "Only print the model's output (errors will still be printed to stderr).")
+	flag.UintVar(&app.maxRetries, "maxretries", 5, "The maximum amount of attempts at retrying requests. If set to zero, no retries will be made.")
 	flag.StringVar(&app.autosaveFilePath, "autosave", "", `Load the path as a JSON context (if it exists) and sets it as the autosave file path. The context is automatically saved to this file after every update. This file is always the last one loaded, regardless of its ordering relative to the -ctx flags.`)
 	autosavePreventLoad := flag.Bool("autosave-prevent-load", false, "Prevent the file specified in the -autosave flag from being loaded. Ignored if -autosave isn't set.")
 	flag.Parse()
