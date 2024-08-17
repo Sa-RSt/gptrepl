@@ -1,5 +1,6 @@
 # gptrepl
 Ferramenta de linha de comando Read Eval Print Loop (REPL) para interagir manualmente com a API de chat da OpenAI, permitindo uma experiência mais flexível e de baixo nível. Esse repositório e ferramenta não estão afiliados à OpenAI.  
+[Read in English / Ler em Inglês](https://github.com/Sa-RSt/gptrepl/blob/main/README.md)
 
 ## Usando o programa
 

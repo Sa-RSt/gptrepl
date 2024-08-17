@@ -1,5 +1,6 @@
 # gptrepl
-Simple Go-based command-line Read Eval Print Loop (REPL) client for manually interacting with the OpenAI Chat Completions API, allowing for a more flexible and low-level experience. This repository and this tool are not affiliated with OpenAI.
+Simple Go-based command-line Read Eval Print Loop (REPL) client for manually interacting with the OpenAI Chat Completions API, allowing for a more flexible and low-level experience. This repository and this tool are not affiliated with OpenAI.   
+[Ler em Português / Read in Portuguese](https://github.com/Sa-RSt/gptrepl/blob/main/README_pt_BR.md)
 
 ## Getting started
 
