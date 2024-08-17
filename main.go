@@ -55,20 +55,22 @@ func (app *App) mainLoop() {
 	if !app.quiet && !app.slashCommandsDisabled {
 		app.printer.Print("Enter \"%v\" for a list of commands.\n", color.GreenString("/help"))
 	}
-	var prompt string
-	if app.quiet {
-		prompt = ""
-	} else {
-		prompt = fmt.Sprintf("%v%v%v%v", color.BlueString("("), color.YellowString(app.model), color.BlueString(")"), color.CyanString("> "))
-	}
-	reader, err := readline.New(prompt)
+	reader, err := readline.New("")
 	if err != nil {
 		app.printer.PrintError("failed to initialize readline: %v\n", err)
 		return
 	}
 	defer reader.Close()
-	for app.appMain(reader) {
-
+	running := true
+	for running {
+		var prompt string
+		if app.quiet {
+			prompt = ""
+		} else {
+			prompt = fmt.Sprintf("%v%v%v%v", color.BlueString("("), color.YellowString(app.model), color.BlueString(")"), color.CyanString("> "))
+		}
+		reader.SetPrompt(prompt)
+		running = app.appMain(reader)
 	}
 }
 
