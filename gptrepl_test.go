@@ -870,8 +870,13 @@ func TestNoRetriesIfMaxRetriesIsZero(t *testing.T) {
 	a, p, c := makeTestApp()
 	a.maxRetries = 0
 	c.err = fmt.Errorf("test error")
+	start := time.Now()
 	if !a.appMain(mr) {
 		t.Fatalf("appMain returned false")
+	}
+	elapsed := time.Since(start)
+	if elapsed >= time.Duration(500)*time.Millisecond {
+		t.Fatalf("expected appMain to run in under 500ms, but got %v", elapsed)
 	}
 	p.expectNoOutput(t)
 	p.expectNoWarnings(t)
@@ -879,6 +884,9 @@ func TestNoRetriesIfMaxRetriesIsZero(t *testing.T) {
 		t.Fatalf("expected errors to contain 'test error', but got %v", p.err.String())
 	}
 	c.expectNoSentContent(t)
+	if c.sendCallsCount != 1 {
+		t.Fatalf("expected SendContext to be called exactly once but it got called %v times", c.sendCallsCount)
+	}
 }
 
 func TestRetries(t *testing.T) {

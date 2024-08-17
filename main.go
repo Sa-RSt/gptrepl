@@ -118,7 +118,7 @@ func (app *App) sendContextAndProcessResponse() (string, error) {
 	waitTime := 1.0
 	for retries >= 0 {
 		stream, err = app.capi.SendContext(app.context)
-		if err != nil {
+		if err != nil && retries > 0 {
 			retries--
 			time.Sleep(time.Duration(waitTime) * time.Second)
 			waitTime *= waitTimeMultiplier
