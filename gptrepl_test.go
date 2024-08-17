@@ -52,10 +52,14 @@ func makeTestPrinter() *MockPrinter {
 type MockCompletionAPI struct {
 	receivedContext []Message
 	contentToSend   []CompletionDelta
+	model           *string
+	apiKey          *string
+	sendCallsCount  int
 	err             error
 }
 
 func (mca *MockCompletionAPI) SendContext(context []Message) (<-chan CompletionDelta, error) {
+	mca.sendCallsCount++
 	if mca.err != nil {
 		return nil, mca.err
 	}
@@ -65,6 +69,14 @@ func (mca *MockCompletionAPI) SendContext(context []Message) (<-chan CompletionD
 		out <- cd
 	}
 	return out, nil
+}
+
+func (mca *MockCompletionAPI) SetApiKey(k string) {
+	mca.apiKey = &k
+}
+
+func (mca *MockCompletionAPI) SetModel(k string) {
+	mca.model = &k
 }
 
 func (mca *MockCompletionAPI) expectNoSentContent(t *testing.T) {
@@ -87,15 +99,18 @@ func makeTestApp() (App, *MockPrinter, *MockCompletionAPI) {
 	apikey := "sk-test"
 	app := App{
 		context:               make([]Message, 0),
-		model:                 &model,
+		model:                 "",
 		slashCommandsDisabled: false,
 		quiet:                 true,
-		apiKey:                &apikey,
+		apiKey:                "",
 		commandHandlers:       make(map[string]Command),
 		autosaveFilePath:      "",
 		printer:               mp,
 		capi:                  mca,
+		maxRetries:            0,
 	}
+	app.SetApiKey(apikey)
+	app.SetModel(model)
 	return app, mp, mca
 }
 
@@ -590,8 +605,11 @@ func TestModelCommand(t *testing.T) {
 	p.expectNoErrors(t)
 	p.expectNoWarnings(t)
 	c.expectNoSentContent(t)
-	if *a.model != "abcdef" {
-		t.Fatalf("app.model == %v, expect abcdef", *a.model)
+	if a.model != "abcdef" {
+		t.Fatalf("app.model == %v, expect abcdef", a.model)
+	}
+	if c.model == nil || *c.model != "abcdef" {
+		t.Fatalf("capi.model == %v, expect abcdef", c.model)
 	}
 }
 

@@ -158,7 +158,7 @@ func modelCommand(app *App, model string) error {
 	if model == "" {
 		return fmt.Errorf("expected exactly one argument (the identifier of the model)")
 	}
-	*app.model = model
+	app.SetModel(model)
 	return nil
 }
 

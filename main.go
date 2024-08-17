@@ -21,19 +21,14 @@ type Message struct {
 
 type App struct {
 	context               []Message
-	model                 *string
+	model                 string
 	slashCommandsDisabled bool
 	quiet                 bool
-	apiKey                *string
+	apiKey                string
 	commandHandlers       map[string]Command
 	autosaveFilePath      string
 	printer               UserPrinter
 	capi                  CompletionAPI
-}
-
-type CompletionDelta struct {
-	delta string
-	err   error
 }
 
 func main() {
@@ -45,12 +40,12 @@ func main() {
 
 func (app *App) configure() {
 	app.printer = &ConsoleUserPrinter{}
+	app.capi = &OpenAICompletionAPI{}
 	app.parseFlags()
 	if !app.fillApiKeyIfNotPresent() {
 		printApiKeyHelpMessage(app.printer)
 		os.Exit(1)
 	}
-	app.capi = &OpenAICompletionAPI{apiKey: app.apiKey, model: app.model}
 }
 
 func (app *App) mainLoop() {
@@ -61,7 +56,7 @@ func (app *App) mainLoop() {
 	if app.quiet {
 		prompt = ""
 	} else {
-		prompt = fmt.Sprintf("%v%v%v%v", color.BlueString("("), color.YellowString(*app.model), color.BlueString(")"), color.CyanString("> "))
+		prompt = fmt.Sprintf("%v%v%v%v", color.BlueString("("), color.YellowString(app.model), color.BlueString(")"), color.CyanString("> "))
 	}
 	reader, err := readline.New(prompt)
 	if err != nil {
@@ -124,6 +119,16 @@ func (app *App) sendContextAndProcessResponse() (string, error) {
 	return responseContent, nil
 }
 
+func (app *App) SetModel(model string) {
+	app.model = model
+	app.capi.SetModel(model)
+}
+
+func (app *App) SetApiKey(key string) {
+	app.apiKey = key
+	app.capi.SetApiKey(key)
+}
+
 func printAndCollectStream(printer UserPrinter, stream <-chan CompletionDelta) (string, error) {
 	var collect bytes.Buffer
 	for {
@@ -180,16 +185,17 @@ func (app *App) parseFlags() {
 	}
 	model := ""
 	apiKey := ""
-	app.model = &model
-	app.apiKey = &apiKey
 	flag.Func("ctx", "Load and append a JSON context file (such as one created by the /save interactive command). Can be used multiple times.", addJsonCtx)
-	flag.StringVar(app.model, "model", "gpt-4", "The OpenAI model ID string (e.g. gpt-3.5-turbo).")
-	flag.StringVar(app.apiKey, "apikey", "", "The OpenAI API key to use. Overrides $OPENAI_API_KEY and ~/.gptrepl-key.")
+	flag.StringVar(&model, "model", "gpt-4", "The OpenAI model ID string (e.g. gpt-3.5-turbo).")
+	flag.StringVar(&apiKey, "apikey", "", "The OpenAI API key to use. Overrides $OPENAI_API_KEY and ~/.gptrepl-key.")
 	flag.BoolVar(&app.slashCommandsDisabled, "nocommands", false, "Disable slash (\"/\") commands.")
 	flag.BoolVar(&app.quiet, "quiet", false, "Only print the model's output (errors will still be printed to stderr).")
 	flag.StringVar(&app.autosaveFilePath, "autosave", "", `Load the path as a JSON context (if it exists) and sets it as the autosave file path. The context is automatically saved to this file after every update. This file is always the last one loaded, regardless of its ordering relative to the -ctx flags.`)
 	autosavePreventLoad := flag.Bool("autosave-prevent-load", false, "Prevent the file specified in the -autosave flag from being loaded. Ignored if -autosave isn't set.")
 	flag.Parse()
+
+	app.SetModel(model)
+	app.SetApiKey(apiKey)
 
 	_, err := os.Stat(app.autosaveFilePath)
 	if !*autosavePreventLoad && app.autosaveFilePath != "" && !errors.Is(err, os.ErrNotExist) {
@@ -202,13 +208,13 @@ func (app *App) parseFlags() {
 }
 
 func (app *App) fillApiKeyIfNotPresent() bool {
-	if *app.apiKey != "" {
+	if app.apiKey != "" {
 		return true
 	}
 
 	key := os.Getenv("OPENAI_API_KEY")
 	if key != "" {
-		*app.apiKey = key
+		app.SetApiKey(key)
 		return true
 	}
 
@@ -220,7 +226,7 @@ func (app *App) fillApiKeyIfNotPresent() bool {
 	if err != nil {
 		return false
 	}
-	*app.apiKey = strings.TrimSpace(string(keyBytes))
+	app.SetApiKey(strings.TrimSpace(string(keyBytes)))
 	return true
 }
 
