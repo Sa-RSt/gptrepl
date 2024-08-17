@@ -1,6 +1,6 @@
 module github.com/Sa-RSt/gptrepl
 
-go 1.23.0
+go 1.23
 
 require (
 	github.com/chzyer/readline v1.5.1
