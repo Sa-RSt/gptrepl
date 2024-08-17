@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -103,6 +104,7 @@ func makeTestApp() (App, *MockPrinter, *MockCompletionAPI) {
 		model:                 "",
 		slashCommandsDisabled: false,
 		quiet:                 true,
+		forgetful:             false,
 		apiKey:                "",
 		commandHandlers:       make(map[string]Command),
 		autosaveFilePath:      "",
@@ -911,6 +913,121 @@ func TestRetries(t *testing.T) {
 		t.Fatalf("expected errors to contain 'test error', but got %v", p.err.String())
 	}
 	c.expectNoSentContent(t)
+}
+
+func TestForgetfulMode(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"abc"}}
+	a, p, c := makeTestApp()
+	a.registerCommandHandlers()
+	a.forgetful = true
+	c.contentToSend = []CompletionDelta{{delta: "def", err: nil}, {delta: "ghi", err: nil}, {delta: "", err: io.EOF}}
+	context := []Message{{Role: "system", Content: "test"}}
+	contextCopy := make([]Message, 0, len(context))
+	contextCopy = append(contextCopy, context...)
+	a.context = contextCopy
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	if !strings.Contains(p.info.String(), "def") {
+		t.Fatalf("expected output to contain 'def', got %v", p.info.String())
+	}
+	if !strings.Contains(p.info.String(), "ghi") {
+		t.Fatalf("expected output to contain 'def', got %v", p.info.String())
+	}
+	p.expectNoErrors(t)
+	p.expectNoWarnings(t)
+	assertContextEquals(t, context, a.context)
+}
+
+func TestForgetfulCommandNoArgumentsNonQuietModeDisabled(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"/forgetful"}}
+	a, p, c := makeTestApp()
+	a.registerCommandHandlers()
+	a.quiet = false
+	a.forgetful = false
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	p.expectNoErrors(t)
+	p.expectNoWarnings(t)
+	c.expectNoSentContent(t)
+	if !strings.Contains(p.info.String(), "disabled") {
+		t.Fatalf("expected output to contain 'disabled', got %v", p.info.String())
+	}
+	p.info.Reset()
+}
+
+func TestForgetfulCommandNoArgumentsNonQuietModeEnabled(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"/forgetful"}}
+	a, p, c := makeTestApp()
+	a.registerCommandHandlers()
+	a.quiet = false
+	a.forgetful = true
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	p.expectNoErrors(t)
+	p.expectNoWarnings(t)
+	c.expectNoSentContent(t)
+	if !strings.Contains(p.info.String(), "enabled") {
+		t.Fatalf("expected output to contain 'enabled', got %v", p.info.String())
+	}
+}
+
+func TestForgetfulCommandWarnsWhenNoArgumentsInQuietMode(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"/forgetful"}}
+	a, p, c := makeTestApp()
+	a.registerCommandHandlers()
+	a.quiet = true
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	p.expectNoErrors(t)
+	p.expectNoOutput(t)
+	c.expectNoSentContent(t)
+	if p.warn.Len() == 0 {
+		t.Fatalf("expected a warning message")
+	}
+}
+
+func TestForgetfulCommandInvalidArgument(t *testing.T) {
+	mr := &MockReadliner{lines: []string{"/forgetful test"}}
+	a, p, c := makeTestApp()
+	a.registerCommandHandlers()
+	if !a.appMain(mr) {
+		t.Fatalf("appMain returned false")
+	}
+	p.expectNoWarnings(t)
+	p.expectNoOutput(t)
+	c.expectNoSentContent(t)
+	if !strings.Contains(p.err.String(), "argument") {
+		t.Fatalf("expected error message to contain 'argument', got %v", p.err.String())
+	}
+}
+
+func TestForgetfulCommand(t *testing.T) {
+	expectedStates := map[string]bool{
+		"true":  true,
+		"false": false,
+		"0":     false,
+		"1":     true,
+	}
+	for k, v := range expectedStates {
+		mr := &MockReadliner{lines: []string{fmt.Sprintf("/forgetful %v", k)}}
+		a, p, c := makeTestApp()
+		a.registerCommandHandlers()
+		a.forgetful = rand.Float64() < 0.5
+		if !a.appMain(mr) {
+			t.Fatalf("appMain returned false")
+		}
+		if a.forgetful != v {
+			t.Fatalf("expected app.forgetful to be %v, got %v", v, a.forgetful)
+		}
+		p.expectNoErrors(t)
+		p.expectNoOutput(t)
+		p.expectNoWarnings(t)
+		c.expectNoSentContent(t)
+	}
 }
 
 func TestParsePlainTextEmptyString(t *testing.T) {

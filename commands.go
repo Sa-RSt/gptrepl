@@ -44,6 +44,9 @@ func (app *App) registerCommandHandlers() {
 		/replacefrom, /appendfrom or /prependfrom.`, [][]string{{"path?"}}),
 		"edit": NewCommand(editCommand, `Opens a nano (by default) text editor instance showing the current conversation context and allowing it to be edited.
 		The context is updated once the editor is closed and the file has been saved. To use a different text editor, specify its path in the GPTREPL_TEXT_EDITOR environment variable.`, [][]string{}),
+		"forgetful": NewCommand(forgetfulCommand, `Enables/disables forgetful mode. When it is enabled, questions and their respective answers
+		from the model are not addded to the context. Forgetful mode does not affect commands (such as /escape). When not in quiet mode,
+		running this command with no arguments prints whether forgetful mode is currently enabled.`, [][]string{{"true", "false", "0", "1"}}),
 		"exit": NewCommand(exitCommand, `Exits the program.`, [][]string{{"status-code?"}}),
 	}
 }
@@ -262,6 +265,33 @@ func editCommand(app *App, args string) error {
 		return err
 	}
 	app.context = newContext
+	return nil
+}
+
+func forgetfulCommand(app *App, args string) error {
+	if args == "" {
+		if app.quiet {
+			app.printer.PrintWarning("forgetful mode was run with no arguments in quiet mode.")
+		} else {
+			mapping := map[bool]string{
+				true:  color.GreenString("enabled"),
+				false: color.RedString("disabled"),
+			}
+			app.printer.Print("Forgetful mode is currently %v.\n", mapping[app.forgetful])
+		}
+		return nil
+	}
+	mapping := map[string]bool{
+		"1":     true,
+		"0":     false,
+		"true":  true,
+		"false": false,
+	}
+	val, ok := mapping[args]
+	if !ok {
+		return fmt.Errorf("unrecognized argument: '%v'. Expected one of 0, 1, true, false", args)
+	}
+	app.forgetful = val
 	return nil
 }
 

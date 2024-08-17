@@ -26,6 +26,7 @@ type App struct {
 	model                 string
 	slashCommandsDisabled bool
 	quiet                 bool
+	forgetful             bool
 	maxRetries            uint
 	apiKey                string
 	commandHandlers       map[string]Command
@@ -108,7 +109,11 @@ func (app *App) appMain(reader Readliner) bool {
 		app.popFromContext(1)
 		return true
 	}
-	app.appendToContext(Message{Role: "assistant", Content: responseContent})
+	if app.forgetful {
+		app.popFromContext(1)
+	} else {
+		app.appendToContext(Message{Role: "assistant", Content: responseContent})
+	}
 	return true
 }
 
@@ -210,6 +215,7 @@ func (app *App) parseFlags() {
 	flag.StringVar(&apiKey, "apikey", "", "The OpenAI API key to use. Overrides $OPENAI_API_KEY and ~/.gptrepl-key.")
 	flag.BoolVar(&app.slashCommandsDisabled, "nocommands", false, "Disable slash (\"/\") commands.")
 	flag.BoolVar(&app.quiet, "quiet", false, "Only print the model's output (errors will still be printed to stderr).")
+	flag.BoolVar(&app.forgetful, "forgetful", false, "Don't update the conversation context after asking questions and receiving answers from the model. Does not affect commands (such as /escape)")
 	flag.UintVar(&app.maxRetries, "maxretries", 5, "The maximum amount of attempts at retrying requests. If set to zero, no retries will be made.")
 	flag.StringVar(&app.autosaveFilePath, "autosave", "", `Load the path as a JSON context (if it exists) and sets it as the autosave file path. The context is automatically saved to this file after every update. This file is always the last one loaded, regardless of its ordering relative to the -ctx flags.`)
 	autosavePreventLoad := flag.Bool("autosave-prevent-load", false, "Prevent the file specified in the -autosave flag from being loaded. Ignored if -autosave isn't set.")
