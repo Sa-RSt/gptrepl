@@ -1,8 +1,5 @@
 # gptrepl
-Ferramenta de linha de comando Read Eval Print Loop (REPL) para interagir manualmente com a API de chat da OpenAI. Esse repositório e ferramenta não estão afiliados à OpenAI.
-
-## Introdução
-Esse programa é uma interface baseada em Go para a API de chat da OpenAI (também conhecida como ChatGPT). O seu principal propósito é permitir uma experiência de usuário mais flexível.
+Ferramenta de linha de comando Read Eval Print Loop (REPL) para interagir manualmente com a API de chat da OpenAI, permitindo uma experiência mais flexível e de baixo nível. Esse repositório e ferramenta não estão afiliados à OpenAI.
 
 ## Usando o programa
 
